@@ -2,7 +2,7 @@
   "version": 2,
   "architecture": "aarch64_cortex-a53",
   "packages": {
-    "luci-app-newdevnotify": "25.222.73874~fc34e88",
+    "luci-app-newdevnotify": "25.222.76006~6793caf",
     "newdevnotify": "1"
   }
 }
