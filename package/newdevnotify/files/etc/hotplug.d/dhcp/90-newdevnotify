@@ -28,6 +28,8 @@ esac
 
 [ -f "$db_path" ] || touch "$db_path"
 
+logger -t newdevnotify-trace "DHCP: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
+
 DEDUPE_KEY="$IFACE|MAC:$MAC"
 if ! grep -qi "^${DEDUPE_KEY}\$" "$db_path"; then
   MSG=$(cat <<EOM
