@@ -1,0 +1,47 @@
+#!/bin/sh
+[ "$ACTION" = "add" ] || exit 0
+
+. /lib/functions.sh
+config_load newdevnotify
+config_get enabled     main enabled 1
+config_get db_path     main db_path '/etc/newdevnotify/known_clients.db'
+config_get main_label  main main_label 'Основная сеть'
+config_get guest_label main guest_label 'Гостевая сеть'
+[ "$enabled" = "1" ] || exit 0
+
+HOST="${HOSTNAME:-"-"}"
+IP="${IPADDR:-"-"}"
+MAC="$(echo "${MACADDR:-"-"}" | tr 'a-f' 'A-F')"
+DATE="$(date '+%Y-%m-%d %H:%M:%S')"
+
+IFACE="${INTERFACE:-$DEVICE}"
+if [ -z "$IFACE" ] && [ -n "$IPADDR" ]; then
+  IFACE="$(ip -o route get "$IPADDR" 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')"
+fi
+[ -z "$IFACE" ] && IFACE="-"
+
+case "$IFACE" in
+  br-lan|lan|lan*)           NETNAME="$main_label" ;;
+  br-guest|guest*|wlan*-1)   NETNAME="$guest_label" ;;
+  *)                         NETNAME="$IFACE" ;;
+esac
+
+[ -f "$db_path" ] || touch "$db_path"
+
+DEDUPE_KEY="$IFACE|MAC:$MAC"
+if ! grep -qi "^${DEDUPE_KEY}\$" "$db_path"; then
+  MSG=$(cat <<EOM
+<b>Роутер</b>
+<u>Подключено новое устройство</u> к <b>$NETNAME</b>
+Дата: $DATE
+Имя: $HOST
+MAC: $MAC
+IP: $IP
+EOM
+)
+  logger -t newdevnotify "NEW: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
+  /usr/bin/newdevnotify_send.sh "$MSG"
+  echo "$DEDUPE_KEY" >> "$db_path"
+else
+  logger -t newdevnotify "KNOWN: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
+fi

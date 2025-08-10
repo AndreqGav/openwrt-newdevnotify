@@ -1,0 +1,10 @@
+{
+	"admin/services/newdevnotify": {
+		"title": "New Device Notify",
+		"order": 90,
+		"action": {
+			"type": "view",
+			"path": "newdevnotify"
+		}
+	}
+}

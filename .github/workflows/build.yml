@@ -1,0 +1,106 @@
+name: Build OpenWrt packages
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          set -euxo pipefail
+          echo "[deps] install..."
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential gawk gettext unzip file python3 rsync curl ca-certificates \
+            zstd wget xz-utils
+
+      - name: Download SDK (24.10.2 mediatek/filogic)
+        run: |
+          set -euxo pipefail
+          echo "[sdk] mkdir /tmp/openwrt-sdk"
+          mkdir -p /tmp/openwrt-sdk
+          echo "[sdk] wget SDK"
+          wget https://downloads.openwrt.org/releases/24.10.2/targets/mediatek/filogic/openwrt-sdk-24.10.2-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          echo "[sdk] extract SDK"
+          tar --use-compress-program=unzstd -xf openwrt-sdk-*.tar.zst --directory=/tmp/openwrt-sdk --strip-components=1
+          echo "[sdk] tree"
+          ls -lah /tmp/openwrt-sdk
+
+      - name: Feeds update
+        run: |
+          set -euxo pipefail
+          echo "[feeds] add local feed"
+          echo "src-link newdevnotify ${GITHUB_WORKSPACE}/package" >> /tmp/openwrt-sdk/feeds.conf.default
+          echo "[feeds] update -a"
+          cd /tmp/openwrt-sdk
+          ./scripts/feeds update -a
+
+      - name: Feeds install
+        run: |
+          set -euxo pipefail
+          echo "[feeds] install -a"
+          cd /tmp/openwrt-sdk
+          ./scripts/feeds install -a
+
+      - name: Defconfig
+        run: |
+          set -euxo pipefail
+          echo "[config] make defconfig"
+          cd /tmp/openwrt-sdk
+          make defconfig
+
+      - name: Build packages
+        run: |
+          set -euxo pipefail
+          cd /tmp/openwrt-sdk
+          echo "[build] newdevnotify"
+          make package/newdevnotify/compile -j"$(nproc)" V=s
+          echo "[build] luci-app-newdevnotify"
+          make package/luci-app-newdevnotify/compile -j"$(nproc)" V=s
+
+      # ВАЖНО: индекс создаём штатно через "make package/index"
+      - name: Index repository (make package/index)
+        run: |
+          set -euxo pipefail
+          cd /tmp/openwrt-sdk
+          ARCH="aarch64_cortex-a53"
+
+          # если задан ключ — кладём его в корень SDK как "key-build"
+          if [ -n "${{ secrets.USIGN_KEY }}" ]; then
+            echo "[index] write key-build"
+            printf "%s" "${{ secrets.USIGN_KEY }}" > key-build
+          else
+            echo "[index] no USIGN_KEY secret provided (index will be unsigned)"
+          fi
+
+          echo "[index] make package/index"
+          make package/index V=s
+
+          echo "[index] copy out"
+          mkdir -p ${GITHUB_WORKSPACE}/packages/${ARCH}
+          mkdir -p ${GITHUB_WORKSPACE}/packages/all
+
+          # из bin/packages/<arch>/<feed>/ и bin/packages/all/<feed>/ забираем всё
+          rsync -a bin/packages/${ARCH}/newdevnotify/ ${GITHUB_WORKSPACE}/packages/${ARCH}/ || true
+          rsync -a bin/packages/all/newdevnotify/ ${GITHUB_WORKSPACE}/packages/all/ || true
+
+          echo "[index] result:"
+          find ${GITHUB_WORKSPACE}/packages -maxdepth 2 -type f -printf "%P\n" | sort || true
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./packages
