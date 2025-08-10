@@ -1,0 +1,7 @@
+config bot 'main'
+	option enabled '1'
+	option token ''
+	option chat_id ''
+	option db_path '/etc/newdevnotify/known_clients.db'
+	option main_label 'Основная сеть'
+	option guest_label 'Гостевая сеть'

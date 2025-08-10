@@ -1,0 +1,49 @@
+name: Build OpenWrt package
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd
+
+      - name: Download OpenWrt SDK
+        run: |
+          wget https://downloads.openwrt.org/releases/24.10.2/targets/mediatek/filogic/openwrt-sdk-24.10.2-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          mkdir sdk
+          tar --use-compress-program=unzstd -xf openwrt-sdk-*.tar.zst --directory=sdk --strip-components=1
+
+      - name: Build package
+        run: |
+          cd sdk
+          mkdir -p package/newdevnotify package/luci-app-newdevnotify
+          cp -r ../package/newdevnotify ./package/
+          cp -r ../package/luci-app-newdevnotify ./package/
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          make defconfig
+          make package/newdevnotify/compile V=s
+          make package/luci-app-newdevnotify/compile V=s
+
+      - name: Upload .ipk to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          files: |
+            sdk/bin/packages/*/*/newdevnotify_*.ipk
+            sdk/bin/packages/*/*/luci-app-newdevnotify_*.ipk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
