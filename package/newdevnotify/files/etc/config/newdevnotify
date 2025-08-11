@@ -5,3 +5,5 @@ config bot 'main'
 	option db_path '/etc/newdevnotify/known_clients.db'
 	option main_label 'Основная сеть'
 	option guest_label 'Гостевая сеть'
+	option template '<b>Роутер</b>\n<u>Подключено новое устройство</u> к <b>$NETNAME</b>\nДата: $DATE\nИмя: $HOST\nMAC: $MAC\nIP: $IP'
+

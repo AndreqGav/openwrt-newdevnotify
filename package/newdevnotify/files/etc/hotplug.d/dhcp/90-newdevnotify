@@ -1,13 +1,21 @@
 #!/bin/sh
-[ "$ACTION" = "add" ] || exit 0
+[ "$ACTION" = "del" ] && exit 0
 
 . /lib/functions.sh
 config_load newdevnotify
 config_get enabled     main enabled 1
-config_get db_path     main db_path '/etc/newdevnotify/known_clients.db'
+config_get db_path     main db_path ''
 config_get main_label  main main_label 'Основная сеть'
 config_get guest_label main guest_label 'Гостевая сеть'
+config_get template main template 'Подключено новое устройство'
+
 [ "$enabled" = "1" ] || exit 0
+
+# ждем 30 сек пока не поднимется логгер и интернет после ребута
+UPTIME="$(cut -d. -f1 /proc/uptime 2>/dev/null)"
+if [ -n "$UPTIME" ] && [ "$UPTIME" -lt 30 ]; then
+    sleep $((30 - UPTIME))
+fi
 
 HOST="${HOSTNAME:-"-"}"
 IP="${IPADDR:-"-"}"
@@ -32,15 +40,16 @@ logger -t newdevnotify-trace "DHCP: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
 
 DEDUPE_KEY="$IFACE|MAC:$MAC"
 if ! grep -qi "^${DEDUPE_KEY}\$" "$db_path"; then
-  MSG=$(cat <<EOM
-<b>Роутер</b>
-<u>Подключено новое устройство</u> к <b>$NETNAME</b>
-Дата: $DATE
-Имя: $HOST
-MAC: $MAC
-IP: $IP
-EOM
-)
+  # формируем сообщение по шаблону
+  MSG="$template"
+  MSG="${MSG//\$NETNAME/$NETNAME}"
+  MSG="${MSG//\$DATE/$DATE}"
+  MSG="${MSG//\$HOST/$HOST}"
+  MSG="${MSG//\$MAC/$MAC}"
+  MSG="${MSG//\$IP/$IP}"
+
+  MSG=$(echo -e "$MSG")
+
   logger -t newdevnotify "NEW: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
   /usr/bin/newdevnotify_send.sh "$MSG"
   echo "$DEDUPE_KEY" >> "$db_path"
