@@ -10,7 +10,7 @@ define Package/newdevnotify
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=Telegram notification on new DHCP client
-  DEPENDS:=+curl +libuci +libubox
+  DEPENDS:=+curl +libuci +libubox +flock
 endef
 
 define Package/newdevnotify/description

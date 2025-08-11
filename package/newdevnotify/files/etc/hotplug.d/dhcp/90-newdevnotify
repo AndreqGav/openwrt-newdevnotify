@@ -12,12 +12,6 @@ config_get template main template 'Подключено новое устрой�
 
 [ "$enabled" = "1" ] || exit 0
 
-# ждем пока система не поднимется (по умолчанию 30 сек)
-UPTIME="$(cut -d. -f1 /proc/uptime 2>/dev/null)"
-if [ -n "$UPTIME" ] && [ "$UPTIME" -lt "$start_timeout_sec" ]; then
-    sleep $(( start_timeout_sec - UPTIME ))
-fi
-
 HOST="${HOSTNAME:-"-"}"
 IP="${IPADDR:-"-"}"
 MAC="$(echo "${MACADDR:-"-"}" | tr 'a-f' 'A-F')"
@@ -35,25 +29,36 @@ case "$IFACE" in
   *)                         NETNAME="$IFACE" ;;
 esac
 
+# ждем пока система не поднимется (по умолчанию 30 сек)
+UPTIME="$(cut -d. -f1 /proc/uptime 2>/dev/null)"
+if [ -n "$UPTIME" ] && [ "$UPTIME" -lt "$start_timeout_sec" ]; then
+    sleep $(( start_timeout_sec - UPTIME ))
+fi
+
 [ -f "$db_path" ] || touch "$db_path"
 
-logger -t newdevnotify-trace "DHCP: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
+logger -t newdevnotify-trace "$ACTION DHCP: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
 
 DEDUPE_KEY="$IFACE|MAC:$MAC"
-if ! grep -qi "^${DEDUPE_KEY}\$" "$db_path"; then
-  # формируем сообщение по шаблону
-  MSG="$template"
-  MSG="${MSG//\$NETNAME/$NETNAME}"
-  MSG="${MSG//\$DATE/$DATE}"
-  MSG="${MSG//\$HOST/$HOST}"
-  MSG="${MSG//\$MAC/$MAC}"
-  MSG="${MSG//\$IP/$IP}"
 
-  MSG=$(echo -e "$MSG")
+(
+  flock -x 200
 
-  logger -t newdevnotify "NEW: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
-  /usr/bin/newdevnotify_send.sh "$MSG"
-  echo "$DEDUPE_KEY" >> "$db_path"
-else
-  logger -t newdevnotify "KNOWN: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
-fi
+  if ! grep -qi "^${DEDUPE_KEY}\$" "$db_path"; then
+    # формируем сообщение по шаблону
+    MSG="$template"
+    MSG="${MSG//\$NETNAME/$NETNAME}"
+    MSG="${MSG//\$DATE/$DATE}"
+    MSG="${MSG//\$HOST/$HOST}"
+    MSG="${MSG//\$MAC/$MAC}"
+    MSG="${MSG//\$IP/$IP}"
+
+    MSG=$(echo -e "$MSG")
+
+    logger -t newdevnotify "NEW: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
+    /usr/bin/newdevnotify_send.sh "$MSG"
+    echo "$DEDUPE_KEY" >> "$db_path"
+  else
+    logger -t newdevnotify "KNOWN: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
+  fi
+) 200>/var/lock/newdevnotify.lock
