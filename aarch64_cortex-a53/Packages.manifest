@@ -1,32 +1,32 @@
 Package: luci-app-newdevnotify
-Version: 25.223.45677~5ef88be
+Version: 25.223.47417~5506c78
 Depends: libc, newdevnotify, luci-lua-runtime
 Source: /home/runner/work/openwrt-newdevnotify/openwrt-newdevnotify/package/luci-app-newdevnotify
 SourceName: luci-app-newdevnotify
 License: MIT
 Section: luci
-SourceDateEpoch: 1754916077
+SourceDateEpoch: 1754917817
 URL: https://github.com/openwrt/luci
 Maintainer: OpenWrt LuCI community
 Architecture: all
 Installed-Size: 20480
-Filename: luci-app-newdevnotify_25.223.45677~5ef88be_all.ipk
-Size: 2296
-SHA256sum: 3d6b01e33e4cc0eff60f2c4fa3647b975c42086184b5d1f27608628907f27bd8
+Filename: luci-app-newdevnotify_25.223.47417~5506c78_all.ipk
+Size: 2297
+SHA256sum: 3f64cf9af318a46d83ec4dd25b19fc660c660aeff8608f35f7849d18e48e1729
 Description:  LuCI Support for New Device Notify
 
 Package: newdevnotify
 Version: 1
-Depends: libc, curl, libuci20250120, libubox20240329, util-linux
+Depends: libc, curl, libuci20250120, libubox20240329, flock
 Source: /home/runner/work/openwrt-newdevnotify/openwrt-newdevnotify/package/newdevnotify
 SourceName: newdevnotify
 License: MIT
 Section: utils
-SourceDateEpoch: 1754916077
+SourceDateEpoch: 1754917817
 Architecture: aarch64_cortex-a53
 Installed-Size: 10240
 Filename: newdevnotify_1_aarch64_cortex-a53.ipk
-Size: 2443
-SHA256sum: dd3a037f5ae34ac39f877acd1459ecf4cf3816a19aa6aab53769c349bd70faf9
+Size: 2442
+SHA256sum: 7d343a63b650ee675bdc2d16424788ca5a6919e233c607655673f2bdd97cbe5c
 Description:  Sends Telegram message when a new DHCP client appears; deduplicates by MAC and NETWORK NAME.
 
