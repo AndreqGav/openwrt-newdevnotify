@@ -3,6 +3,7 @@
 
 . /lib/functions.sh
 config_load newdevnotify
+config_get start_timeout_sec main start_timeout_sec '30'
 config_get enabled     main enabled 1
 config_get db_path     main db_path ''
 config_get main_label  main main_label 'Основная сеть'
@@ -11,10 +12,10 @@ config_get template main template 'Подключено новое устрой�
 
 [ "$enabled" = "1" ] || exit 0
 
-# ждем 30 сек пока не поднимется логгер и интернет после ребута
+# ждем пока система не поднимется (по умолчанию 30 сек)
 UPTIME="$(cut -d. -f1 /proc/uptime 2>/dev/null)"
-if [ -n "$UPTIME" ] && [ "$UPTIME" -lt 30 ]; then
-    sleep $((30 - UPTIME))
+if [ -n "$UPTIME" ] && [ "$UPTIME" -lt "$start_timeout_sec" ]; then
+    sleep $(( start_timeout_sec - UPTIME ))
 fi
 
 HOST="${HOSTNAME:-"-"}"

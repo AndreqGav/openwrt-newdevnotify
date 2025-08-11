@@ -15,6 +15,12 @@ token.datatype = "string"
 chat_id = s:option(Value, "chat_id", translate("Chat ID"))
 chat_id.datatype = "string"
 
+start_timeout = s:option(Value, "start_timeout_sec", translate("Startup delay (seconds)"))
+start_timeout.datatype = "uinteger"
+start_timeout.default = 30
+start_timeout.rmempty = false
+start_timeout.description = translate("Delay processing after boot to avoid missing notifications due to network not ready")
+
 main_label = s:option(Value, "main_label", translate("Main network label"))
 guest_label = s:option(Value, "guest_label", translate("Guest network label"))
 
