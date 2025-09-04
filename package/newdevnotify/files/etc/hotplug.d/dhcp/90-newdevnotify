@@ -102,7 +102,7 @@ DEDUPE_KEY="$NETNAME|MAC:$MAC"
     # Удаляем все строки с этим ключом
     sed -i "\#$DEDUPE_KEY#d" "$db_path"
 
-    echo "$DEDUPE_KEY|$HOST|TIMESTAMP:$ts" >> "$db_path"
+    echo "$DEDUPE_KEY|TIMESTAMP:$ts|$HOST" >> "$db_path"
   else
     logger -t newdevnotify "KNOWN: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
   fi
