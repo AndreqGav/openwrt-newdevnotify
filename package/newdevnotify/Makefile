@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=newdevnotify
-PKG_VERSION:=1.0.2
+PKG_VERSION:=1.0.3
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
@@ -34,6 +34,10 @@ define Package/newdevnotify/install
 
 	$(INSTALL_DIR) $(1)/etc/newdevnotify
 	touch $(1)/etc/newdevnotify/known_clients.db
+endef
+
+define Package/newdevnotify/conffiles
+/etc/newdevnotify/known_clients.db
 endef
 
 $(eval $(call BuildPackage,newdevnotify))
