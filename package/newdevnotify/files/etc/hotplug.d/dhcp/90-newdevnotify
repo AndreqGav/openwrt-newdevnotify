@@ -33,7 +33,7 @@ esac
 
 ts="$(date +%s)"
 
-# ждем пока система не поднимется (по умолчанию 30 сек)
+# ждем пока система не поднимется (по умолчанию 60 сек)
 UPTIME="$(cut -d. -f1 /proc/uptime 2>/dev/null)"
 if [ -n "$UPTIME" ] && [ "$UPTIME" -lt "$start_timeout_sec" ]; then
     sleep $(( start_timeout_sec - UPTIME ))
