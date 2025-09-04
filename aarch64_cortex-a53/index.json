@@ -3,6 +3,6 @@
   "architecture": "aarch64_cortex-a53",
   "packages": {
     "luci-app-newdevnotify": "1.0.1-r1",
-    "newdevnotify": "-1"
+    "newdevnotify": "1.0.1-r1"
   }
 }
