@@ -1,6 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=newdevnotify
+PKG_VERSION:=1.0.1
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
@@ -11,6 +12,7 @@ define Package/newdevnotify
   CATEGORY:=Utilities
   TITLE:=Telegram notification on new DHCP client
   DEPENDS:=+curl +libuci +libubox +flock
+  VERSION:=$(PKG_VERSION)-r$(PKG_RELEASE)
 endef
 
 define Package/newdevnotify/description

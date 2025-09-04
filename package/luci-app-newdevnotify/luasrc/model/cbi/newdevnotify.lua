@@ -24,6 +24,16 @@ start_timeout.description = translate("Delay processing after boot to avoid miss
 main_label = s:option(Value, "main_label", translate("Main network label"))
 guest_label = s:option(Value, "guest_label", translate("Guest network label"))
 
+main_repeat = s:option(Value, "main_repeat_after_sec", translate("Repeat after (sec), Main"))
+main_repeat.datatype = "uinteger"
+main_repeat.default = "0"
+main_repeat.description = translate("0 = notify only once per device in Main network.")
+
+guest_repeat = s:option(Value, "guest_repeat_after_sec", translate("Repeat after (sec), Guest"))
+guest_repeat.datatype = "uinteger"
+guest_repeat.default = "0"
+guest_repeat.description = translate("0 = notify only once per device in Guest network.")
+
 template = s:option(TextValue, "template", translate("Message template for notification"))
 template.rows = 8
 template.wrap = "off"

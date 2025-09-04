@@ -9,6 +9,8 @@ config_get db_path     main db_path ''
 config_get main_label  main main_label 'Основная сеть'
 config_get guest_label main guest_label 'Гостевая сеть'
 config_get template main template 'Подключено новое устройство'
+config_get main_repeat_after_sec  main  main_repeat_after_sec  '0'
+config_get guest_repeat_after_sec main  guest_repeat_after_sec '0'
 
 [ "$enabled" = "1" ] || exit 0
 
@@ -21,13 +23,15 @@ IFACE="${INTERFACE:-$DEVICE}"
 if [ -z "$IFACE" ] && [ -n "$IPADDR" ]; then
   IFACE="$(ip -o route get "$IPADDR" 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')"
 fi
-[ -z "$IFACE" ] && IFACE="-"
+[ -z "$IFACE" ] && IFACE="Сеть не определена"
 
 case "$IFACE" in
   br-lan|lan|lan*)           NETNAME="$main_label" ;;
   br-guest|guest*|wlan*-1)   NETNAME="$guest_label" ;;
   *)                         NETNAME="$IFACE" ;;
 esac
+
+ts="$(date +%s)"
 
 # ждем пока система не поднимется (по умолчанию 30 сек)
 UPTIME="$(cut -d. -f1 /proc/uptime 2>/dev/null)"
@@ -39,12 +43,49 @@ fi
 
 logger -t newdevnotify-trace "$ACTION DHCP: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
 
-DEDUPE_KEY="$IFACE|MAC:$MAC"
+REPEAT_AFTER_SEC="$main_repeat_after_sec"
+[ "$NETNAME" = "$guest_label" ] && REPEAT_AFTER_SEC="$guest_repeat_after_sec"
+
+DEDUPE_KEY="$NETNAME|MAC:$MAC"
 
 (
   flock -x 200
 
-  if ! grep -qi "^${DEDUPE_KEY}\$" "$db_path"; then
+  # match_line будет вида "<NET>|MAC:<MAC>|TIMESTAMP:<timestamp>"
+  match_line="$(grep -F -- "$DEDUPE_KEY" "$db_path" | tail -n1 2>/dev/null || true)"
+
+# Пытаемся вытащить timestamp
+  last_ts=""
+  if [ -n "$match_line" ]; then
+      for field in $(echo "$match_line" | tr '|' ' '); do
+          case "$field" in
+              TIMESTAMP:[0-9]*)
+                  last_ts="${field#TIMESTAMP:}"
+                  break
+                  ;;
+          esac
+      done
+  fi
+
+  need_send="0"
+  if [ -z "$match_line" ]; then
+      # Устройства ещё не было — первый раз всегда шлём
+      need_send="1"
+  elif [ "$REPEAT_AFTER_SEC" -gt 0 ]; then
+      # Интервал разрешён — можно слать после паузы
+      if [ -z "$last_ts" ]; then
+          # Старая запись без времени — считаем, что пора обновить и отправить
+          need_send="1"
+      else
+          diff="$(( ts - last_ts ))"
+          [ "$diff" -ge "$REPEAT_AFTER_SEC" ] && need_send="1" || need_send="0"
+      fi
+  else
+      # Интервал = 0 — после первого уведомления больше не слать
+      need_send="0"
+  fi
+
+  if [ "$need_send" = "1" ]; then
     # формируем сообщение по шаблону
     MSG="$template"
     MSG="${MSG//\$NETNAME/$NETNAME}"
@@ -57,7 +98,11 @@ DEDUPE_KEY="$IFACE|MAC:$MAC"
 
     logger -t newdevnotify "NEW: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
     /usr/bin/newdevnotify_send.sh "$MSG"
-    echo "$DEDUPE_KEY" >> "$db_path"
+
+    # Удаляем все строки с этим ключом
+    sed -i "\#$DEDUPE_KEY#d" "$db_path"
+
+    echo "$DEDUPE_KEY|$HOST|TIMESTAMP:$ts" >> "$db_path"
   else
     logger -t newdevnotify "KNOWN: $NETNAME MAC=$MAC HOST=$HOST IP=$IP"
   fi
